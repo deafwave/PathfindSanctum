@@ -35,19 +35,39 @@ public class BetterSanctumPlugin : BaseSettingsPlugin<BetterSanctumSettings>
 
     public override void Render()
     {
-        var entityList = GameController?.EntityListWrapper?.ValidEntitiesByType[EntityType.Effect].Where(x => x.Metadata.Contains("/Effects/Effect")) ?? Enumerable.Empty<Entity>();
+        var entityList = GameController?.EntityListWrapper?.ValidEntitiesByType[EntityType.Effect]
+            .Where(x => x.Metadata.Contains("/Effects/Effect") &&
+                        x.TryGetComponent<Animated>(out var animComp) &&
+                        animComp?.BaseAnimatedObjectEntity.Metadata != null) ?? [];
 
         foreach (var entity in entityList)
         {
-            if (!(entity.TryGetComponent<Animated>(out var animatedComp) && animatedComp != null && animatedComp.BaseAnimatedObjectEntity != null && animatedComp.BaseAnimatedObjectEntity.Metadata != null)) continue;
+            var animComp = entity.GetComponent<Animated>();
+            var metadata = animComp.BaseAnimatedObjectEntity.Metadata;
+            var pos = RemoteMemoryObject.pTheGame.IngameState.Camera.WorldToScreen(entity.PosNum);
 
-            var entityPos = RemoteMemoryObject.pTheGame.IngameState.Camera.WorldToScreen(entity.PosNum);
-
-            if (animatedComp.BaseAnimatedObjectEntity.Metadata.Contains("League_Sanctum/hazards/hazard_meteor"))
+            if (metadata.Contains("League_Sanctum/hazards/hazard_meteor"))
             {
-                Graphics.DrawTextWithBackground("Meteor", entityPos, Color.Red, FontAlign.Center, Color.Black);
-                Graphics.DrawCircleInWorld(entity.PosNum, 140.0f, Color.Red, 5);
+                DrawHazard("Meteor", pos, entity.PosNum, 140.0f);
             }
+            else if (metadata.Contains("League_Sanctum/hazards/totem_holy_beam_impact"))
+            {
+                DrawHazard("ZAP!", pos, entity.PosNum, 40.0f);
+            }
+            else if (metadata.Contains("League_Necropolis/LyciaBoss/ao/lightning_strike_scourge"))
+            {
+                if (entity.TryGetComponent<AnimationController>(out var animController) &&
+                    animController.AnimationProgress is > 0.0f and < 0.3f)
+                {
+                    DrawHazard("Dodge", pos, entity.PosNum, 100.0f, 60);
+                }
+            }
+        }
+
+        void DrawHazard(string text, Vector2 screenPos, Vector3 worldPos, float radius, int segments = 12)
+        {
+            Graphics.DrawTextWithBackground(text, screenPos, Color.Red, FontAlign.Center, Color.Black);
+            Graphics.DrawFilledCircleInWorld(worldPos, radius, Color.Red with { A = 150 }, segments);
         }
 
         var floorWindow = GameController.IngameState.IngameUi.SanctumFloorWindow;
