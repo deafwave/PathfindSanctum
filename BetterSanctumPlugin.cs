@@ -32,6 +32,29 @@ public class BetterSanctumPlugin : BaseSettingsPlugin<BetterSanctumSettings>
                entityPos.Y >= topBound && entityPos.Y <= bottomBound;
     }
 
+    public override void AreaChange(AreaInstance area)
+    {
+        // Might help with refreshing files so data exists.
+        var files = new FilesContainer(GameController.Game.M);
+        var isDiff = false;
+        if (files.SanctumRooms.EntriesList.Count != GameController.Files.SanctumRooms.EntriesList.Count)
+        {
+            isDiff = true;
+        }
+        else
+        {
+            if (files.SanctumRooms.EntriesList.Where((t, i) => t.Address != GameController.Files.SanctumRooms.EntriesList[i].Address).Any())
+            {
+                isDiff = true;
+            }
+        }
+
+        if (isDiff)
+        {
+            GameController.Game.ReloadFiles();
+        }
+    }
+
     public override void Render()
     {
         var effectEntityList = GameController?.EntityListWrapper?.ValidEntitiesByType[EntityType.Effect]
