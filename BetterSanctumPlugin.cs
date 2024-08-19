@@ -2,12 +2,11 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Numerics;
 using ExileCore;
 using ExileCore.PoEMemory;
 using ExileCore.PoEMemory.Components;
-using ExileCore.PoEMemory.MemoryObjects;
 using ExileCore.Shared.Enums;
+using ImGuiNET;
 using SharpDX;
 using Vector2 = System.Numerics.Vector2;
 using Vector3 = System.Numerics.Vector3;
@@ -35,12 +34,14 @@ public class BetterSanctumPlugin : BaseSettingsPlugin<BetterSanctumSettings>
 
     public override void Render()
     {
-        var entityList = GameController?.EntityListWrapper?.ValidEntitiesByType[EntityType.Effect]
+        var effectEntityList = GameController?.EntityListWrapper?.ValidEntitiesByType[EntityType.Effect]
             .Where(x => x.Metadata.Contains("/Effects/Effect") &&
                         x.TryGetComponent<Animated>(out var animComp) &&
                         animComp?.BaseAnimatedObjectEntity.Metadata != null) ?? [];
 
-        foreach (var entity in entityList)
+        var terrainEntityList = GameController?.EntityListWrapper?.ValidEntitiesByType[EntityType.Terrain] ?? [];
+
+        foreach (var entity in effectEntityList)
         {
             var animComp = entity.GetComponent<Animated>();
             var metadata = animComp.BaseAnimatedObjectEntity.Metadata;
@@ -48,11 +49,11 @@ public class BetterSanctumPlugin : BaseSettingsPlugin<BetterSanctumSettings>
 
             if (metadata.Contains("League_Sanctum/hazards/hazard_meteor"))
             {
-                DrawHazard("Meteor", pos, entity.PosNum, 140.0f);
+                DrawHazard("Meteor", pos, entity.PosNum, 140.0f, 30);
             }
             else if (metadata.Contains("League_Sanctum/hazards/totem_holy_beam_impact"))
             {
-                DrawHazard("ZAP!", pos, entity.PosNum, 40.0f);
+                DrawHazard("ZAP!", pos, entity.PosNum, 40.0f, 30);
             }
             else if (metadata.Contains("League_Necropolis/LyciaBoss/ao/lightning_strike_scourge"))
             {
@@ -64,10 +65,45 @@ public class BetterSanctumPlugin : BaseSettingsPlugin<BetterSanctumSettings>
             }
         }
 
-        void DrawHazard(string text, Vector2 screenPos, Vector3 worldPos, float radius, int segments = 12)
+        foreach (var entity in terrainEntityList)
         {
-            Graphics.DrawTextWithBackground(text, screenPos, Color.Red, FontAlign.Center, Color.Black);
-            Graphics.DrawFilledCircleInWorld(worldPos, radius, Color.Red with { A = 150 }, segments);
+            var pos = RemoteMemoryObject.pTheGame.IngameState.Camera.WorldToScreen(entity.PosNum);
+
+            if (entity.Metadata.Contains("/Sanctum/Objects/Spawners/SanctumSpawner"))
+            {
+                entity.TryGetComponent<StateMachine>(out var stateComponent);
+
+                var isActive = false;
+                if (stateComponent != null)
+                {
+                    var activeState = stateComponent.States.FirstOrDefault(x => x.Name == "active");
+                    isActive = activeState is { Value: 1 };
+                }
+
+                switch (isActive)
+                {
+                    case true:
+                        DrawHazard("Spawner", pos, entity.PosNum, 60.0f, 4, Color.Lime);
+                        break;
+                    case false:
+                        DrawHazard(" + ", pos, entity.PosNum, 20.0f, 4, Color.LightBlue);
+                        break;
+                }
+            }
+        }
+
+        void DrawHazard(string text, Vector2 screenPos, Vector3 worldPos, float radius, int segments, Color color = default)
+        {
+            if (color == default)
+            {
+                color = Color.Red;
+            }
+
+            var textSize = ImGui.CalcTextSize(text);
+            var textPosition = screenPos with { Y = screenPos.Y - textSize.Y / 2 };
+
+            Graphics.DrawTextWithBackground(text, textPosition, color, FontAlign.Center, Color.Black with { A = 200 });
+            Graphics.DrawFilledCircleInWorld(worldPos, radius, color with { A = 150 }, segments);
         }
 
         var floorWindow = GameController.IngameState.IngameUi.SanctumFloorWindow;
