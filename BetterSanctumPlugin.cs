@@ -69,7 +69,7 @@ public class BetterSanctumPlugin : BaseSettingsPlugin<BetterSanctumSettings>
         {
             var pos = RemoteMemoryObject.pTheGame.IngameState.Camera.WorldToScreen(entity.PosNum);
 
-            if (entity.Metadata.Contains("/Sanctum/Objects/Spawners/SanctumSpawner"))
+            if (entity.Metadata.Contains("/Sanctum/Objects/Spawners/SanctumSpawner") || entity.Metadata.Contains("/Sanctum/Objects/SanctumSpawner"))
             {
                 entity.TryGetComponent<StateMachine>(out var stateComponent);
 
