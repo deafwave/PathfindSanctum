@@ -32,7 +32,6 @@ public class PathFinder
         Core = core;
 
         SanctumFloorWindow floorWindow = Core.GameController.IngameState.IngameUi.SanctumFloorWindow;
-        string bossId = floorWindow?.Rooms?.Last()?.Data?.FightRoom?.Id;
 
         playerLayerIndex = floorWindow.FloorData.RoomChoices.Count - 1;
         if (floorWindow.FloorData.RoomChoices.Count > 0)
@@ -41,7 +40,7 @@ public class PathFinder
         }
         roomsByLayer = floorWindow.RoomsByLayer;
         roomLayout = floorWindow.FloorData.RoomLayout;
-        floorNumber = CalculateFloorNumber(bossId);
+        floorNumber = CalculateFloorNumber(floorWindow);
         currentResolve = floorWindow.FloorData.CurrentResolve;
         inspiration = floorWindow.FloorData.Inspiration;
         gold = floorWindow.FloorData.Gold;
@@ -311,8 +310,10 @@ public class PathFinder
         return roomWeight;
     }
 
-    private static int CalculateFloorNumber(string bossId)
+    private static int CalculateFloorNumber(SanctumFloorWindow floorWindow)
     {
+        string bossId = floorWindow?.Rooms?.Last()?.Data?.FightRoom?.Id;
+
         if (bossId == "Cellar_Boss_1_1")
         {
             return 1;
