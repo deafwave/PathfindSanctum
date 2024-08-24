@@ -212,7 +212,7 @@ public class PathFinder
         var roomAffliction = room.Data?.RoomEffect?.ReadableName;
         if (roomAffliction != null)
         {
-            int afflictionWeight = Core.Settings.GetAfflictionWeight(roomAffliction);
+            int afflictionWeight = Core.Settings.GetAfflictionWeight(roomAffliction + floorSuffix);
             if (randomAfflictionOnAffliction)
             {
                 afflictionWeight -= -100; // TODO: Weighted average towards the top of the spectrum
