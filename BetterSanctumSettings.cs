@@ -253,8 +253,8 @@ public class BetterSanctumSettings : ISettings
                     {
                         for (int floor = 1; floor <= 4; floor++)
                         {
-                            var currentValue = GetAfflictionWeight(type);
                             string floorType = $"{type}_Floor{floor}";
+                            var currentValue = GetAfflictionWeight(floorType);
                             if (ImGui.InputInt(floorType, ref currentValue))
                             {
                                 profile.AfflictionWeights[floorType] = currentValue;
