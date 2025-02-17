@@ -1,6 +1,8 @@
 using ExileCore;
-using System.Linq;
 using ExileCore.PoEMemory;
+using System;
+using System.Diagnostics;
+using System.Linq;
 
 namespace PathfindSanctum;
 
@@ -11,6 +13,8 @@ public class PathfindSanctumPlugin : BaseSettingsPlugin<PathfindSanctumSettings>
     private WeightCalculator weightCalculator;
     private RewardHelper rewardHelper;
     private EffectHelper effectHelper;
+    private readonly Stopwatch _sinceLastReloadStopwatch = Stopwatch.StartNew();
+    private readonly Stopwatch _sinceLastPathfindStopwatch = Stopwatch.StartNew();
 
     public override bool Initialise()
     {
@@ -63,11 +67,11 @@ public class PathfindSanctumPlugin : BaseSettingsPlugin<PathfindSanctumSettings>
         if (floorWindow == null || !floorWindow.IsVisible)
             return;
 
-        // if (!GameController.Files.SanctumRooms.EntriesList.Any() && _sinceLastReloadStopwatch.Elapsed > TimeSpan.FromSeconds(5))
-        // {
-        //    GameController.Files.LoadFiles();
-        //    _sinceLastReloadStopwatch.Restart();
-        // }
+        if (GameController.Files.SanctumRooms.EntriesList.Count == 0 && _sinceLastReloadStopwatch.Elapsed > TimeSpan.FromSeconds(5))
+        {
+           GameController.Files.LoadFiles();
+           _sinceLastReloadStopwatch.Restart();
+        }
 
         if (
             stateTracker.HasRoomData()
@@ -78,19 +82,22 @@ public class PathfindSanctumPlugin : BaseSettingsPlugin<PathfindSanctumSettings>
             return;
         }
 
-
-        stateTracker.UpdateRoomStates(floorWindow);
         UpdateAndRenderPath();
     }
 
     private void UpdateAndRenderPath()
     {
-        // TODO: Optimize this so it's not executed on every render (maybe only executed if we updated our known states)
-        pathFinder.CreateRoomWeightMap();
+        // TODO: Find a better way to optimize this so it's not executed on every render
+        // E.g. Only executed if we updated our room states
+        stateTracker.UpdateRoomStates(GameController.Game.IngameState.IngameUi.SanctumFloorWindow); // FIXME: Why does this need to be called every render?
+        if (_sinceLastPathfindStopwatch.Elapsed > TimeSpan.FromSeconds(5))
+        {
+            pathFinder.CreateRoomWeightMap();
+            pathFinder.FindBestPath();
+            _sinceLastPathfindStopwatch.Restart();
+        }
 
         pathFinder.DrawInfo();
-
-        pathFinder.FindBestPath();
         pathFinder.DrawBestPath();
     }
 
