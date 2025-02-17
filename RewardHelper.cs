@@ -222,7 +222,7 @@ public class RewardHelper(
     private bool IsInPactRoom()
     {
         var currentRoom = stateTracker.GetCurrentRoom();
-        return currentRoom.RewardType.Contains("Deal") ?? false;
+        return currentRoom.RewardType.Contains("Deal");
     }
 
 
