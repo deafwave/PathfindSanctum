@@ -227,47 +227,40 @@ public class RewardHelper(
 
 
 
-    private Dictionary<Element, Reward> GetRewardValues(IEnumerable<Element> rewardElements)
+    private Dictionary<Element, Reward> GetRewardValues(IEnumerable<Element> rewardElements) {
+        
+    var rewardValues = new Dictionary<Element, Reward>();
+    var regex = new Regex(@"(Receive)\s((?'rewardcount'(\d+))x(?'rewardname'.*))\s(right now|at the end of the next Floor|at the end of the Floor|on completing the Sanctum)$");
+
+    foreach (var reward in rewardElements)
     {
-        var rewardValues = new Dictionary<Element, Reward>();
+        var match = regex.Match(reward.Children[1].Text);
+        if (!match.Success) continue;
 
-        foreach (var reward in rewardElements)
+        var rewardName = match.Groups["rewardname"].Value.Trim();
+        if (!int.TryParse(match.Groups["rewardcount"].ValueSpan.Trim(), out var stackSize)) continue;
+
+        var baseName = rewardName.Replace("Orbs", "Orb").Replace("Mirrors", "Mirror").TrimEnd('s');
+        if (rewardName.Equals("Orb of Horizon", StringComparison.OrdinalIgnoreCase))
         {
-            var match = Regex.Match(reward.Children[1].Text, @"(Receive)\s((?'rewardcount'(\d+))x(?'rewardname'.*))\s(right now|at the end of the next Floor|at the end of the Floor|on completing the Sanctum)$");
-            if (!match.Success)
-                continue;
-
-            var rewardName = match.Groups["rewardname"].Value.Trim();
-            if (!int.TryParse(match.Groups["rewardcount"].ValueSpan.Trim(), out var stackSize))
-                continue;
-
-            var baseName = rewardName.Replace("Orbs", "Orb").Replace("Mirrors", "Mirror").TrimEnd('s');
-            if (rewardName.Equals("Orb of Horizon", StringComparison.OrdinalIgnoreCase))
-            {
-                baseName = "Orb of Horizons";
-            }
-
-            var data = new BaseItemType
-            {
-                BaseName = baseName,
-                ClassName = "StackableCurrency",
-                Metadata = ""
-            };
-            double value;
-            var fn = pluginBridge.GetMethod<Func<BaseItemType, double>>("NinjaPrice.GetBaseItemTypeValue");
-            if (fn != null)
-            {
-                value = fn(data) * stackSize;
-            } else
-            {
-                value = baseCurrencyValues.GetValueOrDefault(data.BaseName, 0) * stackSize;
-            }
-
-            rewardValues.Add(reward, new Reward { Name = rewardName, Count = stackSize, Value = value });
+            baseName = "Orb of Horizons";
         }
 
-        return rewardValues;
+        var data = new BaseItemType
+        {
+            BaseName = baseName,
+            ClassName = "StackableCurrency",
+            Metadata = ""
+        };
+
+        var fn = pluginBridge.GetMethod<Func<BaseItemType, double>>("NinjaPrice.GetBaseItemTypeValue");
+        var value = (fn != null ? fn(data) : baseCurrencyValues.GetValueOrDefault(data.BaseName, 0)) * stackSize;
+
+        rewardValues.Add(reward, new Reward { Name = rewardName, Count = stackSize, Value = value });
     }
+
+    return rewardValues;
+}
 
     private KeyValuePair<Element, Reward> DetermineBestRewardForFloor3(Dictionary<Element, Reward> rewardValues)
     {
