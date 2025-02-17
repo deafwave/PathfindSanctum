@@ -265,17 +265,40 @@ public class ProfileContent
         profile.AfflictionWeights["Weakened Flesh"] = 0;
         profile.AfflictionWeights["Fiendish Wings"] = -1224;
 
-        // TODO: Overrides for no-hit runs
+        foreach (var currency in profile.CurrencyWeights.Keys)
+        {
+            if (!currency.Contains("Mirrors"))
+            {
+                profile.CurrencyWeights[currency] = 0;
+            }
+            if (currency.Contains("Divine"))
+            {
+                profile.CurrencyWeights[currency] = 2000;
+            }
+        }
         return profile;
     }
-
+    
+    /** What I'm going to use for Legacy of Phrecia */
     public static ProfileContent CreatePhreciaProfile()
     {
-        var profile = CreateNoHitProfile();
+        var profile = CreateBaseProfile();
+        profile.AfflictionWeights["Weakened Flesh"] = 0;
+        profile.AfflictionWeights["Fiendish Wings"] = -1224;
 
         profile.CurrencyWeights["Orbs of Unmaking_Now"] = 0;
         profile.CurrencyWeights["Orbs of Unmaking_EndOfFloor"] = 0;
         profile.CurrencyWeights["Orbs of Unmaking_EndOfSanctum"] = 0;
+        foreach (var currency in profile.CurrencyWeights.Keys)
+        {
+            if (currency.Contains("Orbs of Unmaking"))
+            {
+                profile.CurrencyWeights[currency] = 0;
+            } else if (profile.CurrencyWeights[currency] < 120)
+            {
+                profile.CurrencyWeights[currency] = 1;
+            }
+        }
 
         return profile;
     }
