@@ -286,9 +286,6 @@ public class ProfileContent
         profile.AfflictionWeights["Weakened Flesh"] = 0;
         profile.AfflictionWeights["Fiendish Wings"] = -1224;
 
-        profile.CurrencyWeights["Orbs of Unmaking_Now"] = 0;
-        profile.CurrencyWeights["Orbs of Unmaking_EndOfFloor"] = 0;
-        profile.CurrencyWeights["Orbs of Unmaking_EndOfSanctum"] = 0;
         foreach (var currency in profile.CurrencyWeights.Keys)
         {
             if (currency.Contains("Orbs of Unmaking"))
