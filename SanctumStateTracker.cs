@@ -119,6 +119,11 @@ public class SanctumStateTracker
     {
         return roomStates.TryGetValue((layer, room), out var state) ? state : null;
     }
+
+    public RoomState GetCurrentRoom()
+    {
+        return GetRoom(PlayerLayerIndex, PlayerRoomIndex);
+    }
 }
 
 public class RoomState

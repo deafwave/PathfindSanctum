@@ -221,8 +221,8 @@ public class RewardHelper(
 
     private bool IsInPactRoom()
     {
-        var currentRoom = floorWindow.RoomsByLayer[stateTracker.PlayerLayerIndex][stateTracker.PlayerRoomIndex];
-        return currentRoom?.Data?.RewardRoom?.Id.Contains("_Deal") ?? false;
+        var currentRoom = stateTracker.GetCurrentRoom();
+        return currentRoom.RewardType.Contains("Deal") ?? false;
     }
 
 
