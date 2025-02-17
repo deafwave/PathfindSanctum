@@ -7,6 +7,7 @@
     <LangVersion>latest</LangVersion>
     <DebugType>embedded</DebugType>
     <PathMap>$(MSBuildProjectDirectory)=$(MSBuildProjectName)</PathMap>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="ExileCore">
@@ -21,6 +22,7 @@
   <ItemGroup>
     <PackageReference Include="ImGui.NET" Version="1.90.0.1" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <!-- Until Core2 is backported -->
     <PackageReference Include="SharpDX.Mathematics" Version="4.2.0" />
   </ItemGroup>
 </Project>
