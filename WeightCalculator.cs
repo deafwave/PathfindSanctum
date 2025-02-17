@@ -113,13 +113,13 @@ public class WeightCalculator(GameController gameController, PathfindSanctumSett
             return 0;
 
         int typeWeight = settings.GetRewardRoomWeight(fightType + floorSuffix);
-        if (settings.DebugEnable.Value)
-            debugText.AppendLine($"{fightType}:{typeWeight}");
-
         if(fightType == "Deferral" && room.Rewards.Count > 0)
         {
             typeWeight = 0;
         }
+
+        if (settings.DebugEnable.Value)
+            debugText.AppendLine($"{fightType}:{typeWeight}");
 
         return typeWeight;
 
