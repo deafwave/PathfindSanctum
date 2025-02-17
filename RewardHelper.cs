@@ -132,6 +132,7 @@ public class RewardHelper(
 
     private void DrawBestReward(KeyValuePair<Element, Reward> reward, SharpDX.RectangleF rewardPos)
     {
+        // Different color for divines & mirrors
         SharpDX.Color boxColor = reward.Value.Name.Contains("Divine Orb") || reward.Value.Name.Contains("Mirror") ? SharpDX.Color.Magenta : SharpDX.Color.DarkGreen;
         string text = reward.Value.Name.Contains("Divine Orb") ? "TAKE THE DIVINES..." : "TAKE THIS";
 
@@ -186,7 +187,8 @@ public class RewardHelper(
         }
         else
         {
-            if (rewardValues.Any(x => x.Value.Name.Contains("Divine Orb")) || rewardsWeCanTake >= 1 && pactCounter == 0)
+            // Idk what this one does
+            if (rewardValues.Any(x => x.Value.Name.Contains("Divine Orb") || x.Value.Name.Contains("Mirror")) || rewardsWeCanTake >= 1 && pactCounter == 0)
             {
                 DrawRewardElements(rewardValues, rewardValues.OrderByDescending(x => x.Value.Value).FirstOrDefault());
             }
@@ -274,7 +276,8 @@ public class RewardHelper(
     {
         if (floorWindow.FloorData.RoomChoices.Count == 8)
         {
-            if (rewardValues.All(x => !x.Value.Name.Contains("Divine Orb")))
+            // Idk what this one does
+            if (rewardValues.All(x => !x.Value.Name.Contains("Divine Orb") && !x.Value.Name.Contains("Mirror")))
             {
                 return rewardValues.Where(x => x.Key.Address == sanctumRewardWindow.RewardElements.First().Address)
                     .OrderByDescending(x => x.Value.Value).FirstOrDefault();
@@ -285,8 +288,9 @@ public class RewardHelper(
             }
         }
 
+        // idk what this one does
         return rewardValues.Where(x => x.Key.Address != sanctumRewardWindow.RewardElements.Last().Address
-        || (x.Key.Address == sanctumRewardWindow.RewardElements.Last().Address && x.Value.Name.Contains("Divine Orb")))
+        || (x.Key.Address == sanctumRewardWindow.RewardElements.Last().Address && (x.Value.Name.Contains("Mirror") || x.Value.Name.Contains("Divine Orb"))))
             .OrderByDescending(x => x.Value.Value).FirstOrDefault();
     }
     private (int divCounter, int pactCounter, int rewardsWeCanTake) CalculateFloor4Metrics()
@@ -309,7 +313,7 @@ public class RewardHelper(
                 pactCounter++;
             }
 
-            if (new[] { sanctumRoom?.Data?.Reward1, sanctumRoom?.Data?.Reward2, sanctumRoom?.Data?.Reward3 }.Any(x => x != null && x.CurrencyName.Contains("Divine Orb")))
+            if (new[] { sanctumRoom?.Data?.Reward1, sanctumRoom?.Data?.Reward2, sanctumRoom?.Data?.Reward3 }.Any(x => x != null && (x.CurrencyName.Contains("Divine Orb") || x.CurrencyName.Contains("Mirror"))))
             {
                 divCounter++;
             }
