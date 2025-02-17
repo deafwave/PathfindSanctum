@@ -164,6 +164,9 @@ public class PathFinder(
     #region Visualization
     public void DrawInfo()
     {
+        if(!settings.DebugEnable.Value && displayTexts.Count == 0)
+            return;
+
         var roomsByLayer = sanctumStateTracker.roomsByLayer;
 
         for (var layer = 0; layer < roomsByLayer.Count; layer++)
