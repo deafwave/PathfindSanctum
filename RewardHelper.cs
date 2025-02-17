@@ -313,6 +313,7 @@ public class RewardHelper(
                 pactCounter++;
             }
 
+            // Idk what this one does
             if (new[] { sanctumRoom?.Data?.Reward1, sanctumRoom?.Data?.Reward2, sanctumRoom?.Data?.Reward3 }.Any(x => x != null && (x.CurrencyName.Contains("Divine Orb") || x.CurrencyName.Contains("Mirror"))))
             {
                 divCounter++;
