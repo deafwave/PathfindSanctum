@@ -325,7 +325,8 @@ public class PathfindSanctumSettings : ISettings
     public Dictionary<string, ProfileContent> Profiles = new Dictionary<string, ProfileContent>
     {
         ["Default"] = ProfileContent.CreateDefaultProfile(),
-        ["NoHit"] = ProfileContent.CreateNoHitProfile()
+        ["NoHit"] = ProfileContent.CreateNoHitProfile(),
+        ["Phrecia"] = ProfileContent.CreatePhreciaProfile()
     };
 
     public string CurrentProfile;
