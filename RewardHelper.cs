@@ -77,22 +77,11 @@ public class RewardHelper(
 
         if (usingDivinity)
         {
-            if (floor <= 2)
-            {
-                DrawRewardsForFloors1And2(rewardValues);
-            }
-            else if (floor == 3)
-            {
-                DrawRewardsForFloor3(rewardValues);
-            }
-            else if (floor == 4)
-            {
-                DrawRewardsForFloor4(rewardValues);
-            }
+            DrawRewardsDivinity(rewardValues);
         }
         else
         {
-            DrawRewardsForNoDivinity(rewardValues);
+            DrawRewardsSimple(rewardValues);
         }
     }
 
@@ -125,7 +114,7 @@ public class RewardHelper(
             }
             else
             {
-                DrawLastReward(reward, rewardPos);
+                DrawDivinityWarning(reward, rewardPos);
             }
         }
     }
@@ -148,24 +137,12 @@ public class RewardHelper(
         graphics.DrawText($"{reward.Value.Count}x {reward.Value.Name}", new Vector2(rewardPos.Center.X, rewardPos.Center.Y) + new Vector2(0, 8), SharpDX.Color.White, 45, FontAlign.Center);
     }
 
-    private void DrawLastReward(KeyValuePair<Element, Reward> reward, SharpDX.RectangleF rewardPos)
+    private void DrawDivinityWarning(KeyValuePair<Element, Reward> reward, SharpDX.RectangleF rewardPos)
     {
         graphics.DrawBox(rewardPos, SharpDX.Color.DarkRed);
         graphics.DrawText($"THIS IS FLOOR {floor}...", new Vector2(rewardPos.Center.X, rewardPos.Center.Y) - new Vector2(0, 10), SharpDX.Color.White, 45, FontAlign.Center);
         graphics.DrawText("DONT TAKE LAST REWARD", new Vector2(rewardPos.Center.X, rewardPos.Center.Y) + new Vector2(0, 5), SharpDX.Color.White, 45, FontAlign.Center);
         graphics.DrawText($"{reward.Value.Count}x {reward.Value.Name}", new Vector2(rewardPos.Center.X, rewardPos.Center.Y) + new Vector2(0, 20), SharpDX.Color.White, 45, FontAlign.Center);
-    }
-
-    private void DrawRewardsForFloors1And2(Dictionary<Element, Reward> rewardValues)
-    {
-        var bestReward = GetBestReward(rewardValues, sanctumRewardWindow.RewardElements.Last().Address);
-        DrawRewardElements(rewardValues, bestReward);
-    }
-    
-    private void DrawRewardsForFloor3(Dictionary<Element, Reward> rewardValues)
-    {
-        var bestReward = DetermineBestRewardForFloor3(rewardValues);
-        DrawRewardElements(rewardValues, bestReward);
     }
 
     private void DrawFloor4InfoText(Vector2 position, int pactCounter, int rewardsWeCanTake, int divCounter)
@@ -212,10 +189,34 @@ public class RewardHelper(
         DrawRewardElements(rewardValues, selectedRewards.FirstOrDefault());
     }
 
-    private void DrawRewardsForNoDivinity(Dictionary<Element, Reward> rewardValues)
+    private void DrawRewardsSimple(Dictionary<Element, Reward> rewardValues)
     {
         var bestReward = rewardValues.OrderByDescending(x => x.Value.Value).FirstOrDefault();
         DrawRewardElements(rewardValues, bestReward);
+    }
+
+    private void DrawRewardsDivinity(Dictionary<Element, Reward> rewardValues)
+    {
+        if (floor <= 2)
+        {
+            var bestReward = GetBestRewardSkipLast(rewardValues, sanctumRewardWindow.RewardElements.Last().Address);
+            DrawRewardElements(rewardValues, bestReward);
+        }
+        else if (floor == 3)
+        {
+            var bestReward = DetermineBestRewardForFloor3(rewardValues);
+            DrawRewardElements(rewardValues, bestReward);
+        }
+        else if (floor == 4)
+        {
+            DrawRewardsForFloor4(rewardValues);
+        }
+    }
+
+    private static KeyValuePair<Element, Reward> GetBestRewardSkipLast(Dictionary<Element, Reward> rewardValues, long lastRewardAddress)
+    {
+        return rewardValues.Where(x => x.Key.Address != lastRewardAddress)
+                            .OrderByDescending(x => x.Value.Value).FirstOrDefault();
     }
 
     private bool IsInPactRoom()
@@ -224,11 +225,7 @@ public class RewardHelper(
         return currentRoom?.Data?.RewardRoom?.Id.Contains("_Deal") ?? false;
     }
 
-    private KeyValuePair<Element, Reward> GetBestReward(Dictionary<Element, Reward> rewardValues, long lastRewardAddress)
-    {
-        return rewardValues.Where(x => x.Key.Address != lastRewardAddress)
-                            .OrderByDescending(x => x.Value.Value).FirstOrDefault();
-    }
+
 
     private Dictionary<Element, Reward> GetRewardValues(IEnumerable<Element> rewardElements)
     {
