@@ -16,7 +16,7 @@ public class PathfindSanctumPlugin : BaseSettingsPlugin<PathfindSanctumSettings>
     {
         weightCalculator = new WeightCalculator(GameController, Settings);
         pathFinder = new PathFinder(Graphics, Settings, stateTracker, weightCalculator);
-        rewardHelper = new RewardHelper(GameController, GameController.PluginBridge, GameController.IngameState, Graphics, pathFinder, stateTracker);
+        rewardHelper = new RewardHelper(GameController.PluginBridge, GameController.IngameState, Graphics, pathFinder, stateTracker);
         effectHelper = new EffectHelper(GameController, Graphics);
         return base.Initialise();
     }

@@ -8,14 +8,12 @@ using ExileCore.PoEMemory;
 using ExileCore.PoEMemory.Elements.Sanctum;
 using ExileCore.PoEMemory.MemoryObjects;
 using ExileCore.PoEMemory.Models;
-using ExileCore.Shared;
 using ExileCore.Shared.Enums;
 using GameOffsets.Native;
 
 namespace PathfindSanctum;
 
 public class RewardHelper(
-    GameController gameController,
     PluginBridge pluginBridge,
     IngameState gameState,
     ExileCore.Graphics graphics,
@@ -61,44 +59,40 @@ public class RewardHelper(
     };
 
     bool usingDivinity = false;
-
     SanctumFloorWindow floorWindow;
+    SanctumRewardWindow sanctumRewardWindow;
+    int floor;
 
     public void DrawRewards()
     {
         usingDivinity = gameState.Data.MapStats.Any(x => x.Key.ToString() == "MapLycia2DuplicateUpToXDeferredRewards");
+        floor = stateTracker.PlayerFloor;
         floorWindow = gameState.IngameUi.SanctumFloorWindow;
-        if (floorWindow == null)
+        sanctumRewardWindow = gameState.IngameUi.SanctumRewardWindow;
+        if (floorWindow == null || !sanctumRewardWindow.IsVisible || sanctumRewardWindow.RewardElements.Count == 0 || sanctumRewardWindow.RewardElements[0].ChildCount >= 3)
             return;
-
-        var sanctumRewardWindow = gameState.IngameUi.SanctumRewardWindow;
-        if (!sanctumRewardWindow.IsVisible || sanctumRewardWindow.RewardElements.Count == 0 || sanctumRewardWindow.RewardElements[0].ChildCount >= 3)
-        {
-            return;
-        }
-        var floor = stateTracker.PlayerFloor;
+        
         var rewardValues = GetRewardValues(sanctumRewardWindow.RewardElements);
-
         DrawDivinityText(usingDivinity, sanctumRewardWindow.PositionNum);
 
         if (usingDivinity)
         {
             if (floor <= 2)
             {
-                DrawRewardsForFloors1And2(rewardValues, sanctumRewardWindow, floor);
+                DrawRewardsForFloors1And2(rewardValues);
             }
             else if (floor == 3)
             {
-                DrawRewardsForFloor3(rewardValues, sanctumRewardWindow, floorWindow);
+                DrawRewardsForFloor3(rewardValues);
             }
             else if (floor == 4)
             {
-                DrawRewardsForFloor4(rewardValues, sanctumRewardWindow, floorWindow);
+                DrawRewardsForFloor4(rewardValues);
             }
         }
         else
         {
-            DrawRewardsForNoDivinity(rewardValues, sanctumRewardWindow, floor);
+            DrawRewardsForNoDivinity(rewardValues);
         }
     }
 
@@ -115,7 +109,7 @@ public class RewardHelper(
         graphics.DrawText(text, position - new Vector2(100, 40), SharpDX.Color.White, 45, FontAlign.Center);
     }
 
-    private void DrawRewardElements(Dictionary<Element, Reward> rewardValues, KeyValuePair<Element, Reward> bestReward, SanctumRewardWindow sanctumRewardWindow, int floor)
+    private void DrawRewardElements(Dictionary<Element, Reward> rewardValues, KeyValuePair<Element, Reward> bestReward)
     {
         foreach (var reward in rewardValues)
         {
@@ -131,7 +125,7 @@ public class RewardHelper(
             }
             else
             {
-                DrawLastReward(reward, rewardPos, floor);
+                DrawLastReward(reward, rewardPos);
             }
         }
     }
@@ -153,7 +147,7 @@ public class RewardHelper(
         graphics.DrawText($"{reward.Value.Count}x {reward.Value.Name}", new Vector2(rewardPos.Center.X, rewardPos.Center.Y) + new Vector2(0, 8), SharpDX.Color.White, 45, FontAlign.Center);
     }
 
-    private void DrawLastReward(KeyValuePair<Element, Reward> reward, SharpDX.RectangleF rewardPos, int floor)
+    private void DrawLastReward(KeyValuePair<Element, Reward> reward, SharpDX.RectangleF rewardPos)
     {
         graphics.DrawBox(rewardPos, SharpDX.Color.DarkRed);
         graphics.DrawText($"THIS IS FLOOR {floor}...", new Vector2(rewardPos.Center.X, rewardPos.Center.Y) - new Vector2(0, 10), SharpDX.Color.White, 45, FontAlign.Center);
@@ -161,16 +155,16 @@ public class RewardHelper(
         graphics.DrawText($"{reward.Value.Count}x {reward.Value.Name}", new Vector2(rewardPos.Center.X, rewardPos.Center.Y) + new Vector2(0, 20), SharpDX.Color.White, 45, FontAlign.Center);
     }
 
-    private void DrawRewardsForFloors1And2(Dictionary<Element, Reward> rewardValues, SanctumRewardWindow sanctumRewardWindow, int floor)
+    private void DrawRewardsForFloors1And2(Dictionary<Element, Reward> rewardValues)
     {
         var bestReward = GetBestReward(rewardValues, sanctumRewardWindow.RewardElements.Last().Address);
-        DrawRewardElements(rewardValues, bestReward, sanctumRewardWindow, floor);
+        DrawRewardElements(rewardValues, bestReward);
     }
     
-    private void DrawRewardsForFloor3(Dictionary<Element, Reward> rewardValues, SanctumRewardWindow sanctumRewardWindow, SanctumFloorWindow floorWindow)
+    private void DrawRewardsForFloor3(Dictionary<Element, Reward> rewardValues)
     {
-        var bestReward = DetermineBestRewardForFloor3(rewardValues, sanctumRewardWindow, floorWindow);
-        DrawRewardElements(rewardValues, bestReward, sanctumRewardWindow, 3);
+        var bestReward = DetermineBestRewardForFloor3(rewardValues);
+        DrawRewardElements(rewardValues, bestReward);
     }
 
     private void DrawFloor4InfoText(Vector2 position, int pactCounter, int rewardsWeCanTake, int divCounter)
@@ -180,49 +174,49 @@ public class RewardHelper(
         graphics.DrawText($"Rewards We Can Take: {rewardsWeCanTake}", position - new Vector2(160, -40), SharpDX.Color.White, 25, FontAlign.Left);
     }
 
-    private void DrawRewardsForFloor4(Dictionary<Element, Reward> rewardValues, SanctumRewardWindow sanctumRewardWindow, SanctumFloorWindow floorWindow)
+    private void DrawRewardsForFloor4(Dictionary<Element, Reward> rewardValues)
     {
-        var (divCounter, pactCounter, path, rewardsWeCanTake) = CalculateFloor4Metrics(floorWindow);
+        var (divCounter, pactCounter, rewardsWeCanTake) = CalculateFloor4Metrics();
 
         DrawFloor4InfoText(sanctumRewardWindow.PositionNum, pactCounter, rewardsWeCanTake, divCounter);
 
-        if (divCounter <= 1 && rewardsWeCanTake >= 1 && !IsInPactRoom(floorWindow, pathFinder))
+        if (divCounter <= 1 && rewardsWeCanTake >= 1 && !IsInPactRoom())
         {
-            DrawSelectedRewardsForFloor4(rewardValues, sanctumRewardWindow, floorWindow, path, rewardsWeCanTake);
+            DrawSelectedRewardsForFloor4(rewardValues, rewardsWeCanTake);
         }
         else
         {
             if (rewardValues.Any(x => x.Value.Name.Contains("Divine Orb")) || rewardsWeCanTake >= 1 && pactCounter == 0)
             {
-                DrawRewardElements(rewardValues, rewardValues.OrderByDescending(x => x.Value.Value).FirstOrDefault(), sanctumRewardWindow, 4);
+                DrawRewardElements(rewardValues, rewardValues.OrderByDescending(x => x.Value.Value).FirstOrDefault());
             }
             else
             {
-                DrawRewardElements(rewardValues, rewardValues.FirstOrDefault(), sanctumRewardWindow, 4);
+                DrawRewardElements(rewardValues, rewardValues.FirstOrDefault());
             }
         }
     }
 
-    private void DrawSelectedRewardsForFloor4(Dictionary<Element, Reward> rewardValues, SanctumRewardWindow sanctumRewardWindow, SanctumFloorWindow floorWindow, List<(int, int)> path, int rewardsWeCanTake)
+    private void DrawSelectedRewardsForFloor4(Dictionary<Element, Reward> rewardValues, int rewardsWeCanTake)
     {
         var selectedRewards = rewardValues.OrderByDescending(x => x.Value.Value)
                                           .Take(rewardsWeCanTake);
         if (selectedRewards.Count() == 0)
         {
-            DrawRewardElements(rewardValues, rewardValues.FirstOrDefault(), sanctumRewardWindow, 4);
+            DrawRewardElements(rewardValues, rewardValues.FirstOrDefault());
             return;
         }
 
-        DrawRewardElements(rewardValues, selectedRewards.FirstOrDefault(), sanctumRewardWindow, 4);
+        DrawRewardElements(rewardValues, selectedRewards.FirstOrDefault());
     }
 
-    private void DrawRewardsForNoDivinity(Dictionary<Element, Reward> rewardValues, SanctumRewardWindow sanctumRewardWindow, int floor)
+    private void DrawRewardsForNoDivinity(Dictionary<Element, Reward> rewardValues)
     {
         var bestReward = rewardValues.OrderByDescending(x => x.Value.Value).FirstOrDefault();
-        DrawRewardElements(rewardValues, bestReward, sanctumRewardWindow, floor);
+        DrawRewardElements(rewardValues, bestReward);
     }
 
-    private bool IsInPactRoom(SanctumFloorWindow floorWindow, PathFinder pathFinder)
+    private bool IsInPactRoom()
     {
         var currentRoom = floorWindow.RoomsByLayer[stateTracker.PlayerLayerIndex][stateTracker.PlayerRoomIndex];
         return currentRoom?.Data?.RewardRoom?.Id.Contains("_Deal") ?? false;
@@ -276,7 +270,7 @@ public class RewardHelper(
         return rewardValues;
     }
 
-    private KeyValuePair<Element, Reward> DetermineBestRewardForFloor3(Dictionary<Element, Reward> rewardValues, SanctumRewardWindow sanctumRewardWindow, SanctumFloorWindow floorWindow)
+    private KeyValuePair<Element, Reward> DetermineBestRewardForFloor3(Dictionary<Element, Reward> rewardValues)
     {
         if (floorWindow.FloorData.RoomChoices.Count == 8)
         {
@@ -295,12 +289,12 @@ public class RewardHelper(
         || (x.Key.Address == sanctumRewardWindow.RewardElements.Last().Address && x.Value.Name.Contains("Divine Orb")))
             .OrderByDescending(x => x.Value.Value).FirstOrDefault();
     }
-    private (int divCounter, int pactCounter, List<(int, int)> path, int rewardsWeCanTake) CalculateFloor4Metrics(SanctumFloorWindow floorWindow)
+    private (int divCounter, int pactCounter, int rewardsWeCanTake) CalculateFloor4Metrics()
     {
         int divCounter = 0;
         int pactCounter = 0;
 
-        List<(int, int)> path = new List<(int, int)>();
+        List<(int, int)> path = [];
         pathFinder.CreateRoomWeightMap();
         path = pathFinder.FindBestPath();
 
@@ -331,7 +325,7 @@ public class RewardHelper(
 
         int rewardsWeCanTake = 2 - currentRewardCount - pactCounter - divCounter;
 
-        return (divCounter, pactCounter, path, rewardsWeCanTake);
+        return (divCounter, pactCounter, rewardsWeCanTake);
     }
 
     private bool IsCurrentPlayerRoom((int, int) room)
