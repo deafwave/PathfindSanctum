@@ -24,38 +24,40 @@ public class RewardHelper(
     /** Meant to be used for day 1-2 when NinjaPricer is not working */
     private readonly Dictionary<string, double> baseCurrencyValues = new()
     {
-        {"Orb of Transmutation", 0.01},
+        {"Armourer's Scrap", 0.11},
+        {"Awakened Sextant", 1},
+        {"Blacksmith's Whetstone", 0.07},
+        {"Blessed Orb", 0.13},
+        {"Cartographer's Chisel", 0.5},
+        {"Chaos Orb", 1},
+        {"Chromatic Orb", 0.1},
+        {"Divine Orb", 170.5},
+        {"Divine Vessel", 0.5},
+        {"Enkindling Orb", 0.4},
+        {"Exalted Orb", 12},
+        {"Gemcutter's Prism", 1.2},
+        {"Glassblower's Bauble", 0.45},
+        {"Instilling Orb", 0.4},
+        {"Jeweller's Orb", 0.04},
+        {"Mirror of Kalandra", 128600},
+        {"Orb of Alchemy", 0.04},
+        {"Orb of Alteration", 0.19},
+        {"Orb of Annulment", 4.3},
         {"Orb of Augmentation", 0.03},
         {"Orb of Binding", 0.03},
-        {"Orb of Alchemy", 0.04},
         {"Orb of Chance", 0.04},
-        {"Jeweller's Orb", 0.04},
-        {"Blacksmith's Whetstone", 0.07},
-        {"Chromatic Orb", 0.1},
-        {"Armourer's Scrap", 0.11},
-        {"Orb of Horizons", 0.13},
-        {"Blessed Orb", 0.13},
         {"Orb of Fusing", 0.15},
-        {"Orb of Alteration", 0.19},
-        {"Orb of Scouring", 0.25},
-        {"Instilling Orb", 0.4},
-        {"Enkindling Orb", 0.4},
-        {"Glassblower's Bauble", 0.4},
-        {"Regal Orb", 0.4},
-        {"Divine Vessel", 0.5},
-        {"Vaal Orb", 0.64},
-        {"Cartographer's Chisel", 0.91},
+        {"Orb of Horizon", 0.13},
         {"Orb of Regret", 0.8},
-        {"Orb of Unmaking", 0}, // 0 for phrecia, 1 for not
-        {"Chaos Orb", 1},
-        {"Gemcutter's Prism", 1.2},
-        {"Orb of Annulment", 4.3},
-        {"Veiled Orb", 1700},
+        {"Orb of Scouring", 0.25},
+        {"Orb of Transmutation", 0.01},
+        {"Orb of Unmaking", 0}, // 0 for Phrecia, 1 for normal leagues
+        {"Regal Orb", 0.4},
+        {"Sacred Orb", 11},
         {"Stacked Deck", 2},
-        {"Exalted Orb", 8},
-        {"Sacred Orb", 15},
-        {"Divine Orb", 170.5},
-        {"Mirror of Kalandra", 128600},
+        {"Vaal Orb", 0.41},
+        {"Veiled Orb", 1700},
+        {"Veiled Scarab", 1}
     };
 
     bool usingDivinity = false;
@@ -71,7 +73,7 @@ public class RewardHelper(
         sanctumRewardWindow = gameState.IngameUi.SanctumRewardWindow;
         if (floorWindow == null || !sanctumRewardWindow.IsVisible || sanctumRewardWindow.RewardElements.Count == 0 || sanctumRewardWindow.RewardElements[0].ChildCount >= 3)
             return;
-        
+
         var rewardValues = GetRewardValues(sanctumRewardWindow.RewardElements);
         DrawDivinityText(usingDivinity, sanctumRewardWindow.PositionNum);
 
@@ -199,7 +201,7 @@ public class RewardHelper(
     {
         if (floor <= 2)
         {
-            var bestReward = GetBestRewardSkipLast(rewardValues, sanctumRewardWindow.RewardElements.Last().Address);
+            var bestReward = GetBestReward(rewardValues, sanctumRewardWindow, 1);
             DrawRewardElements(rewardValues, bestReward);
         }
         else if (floor == 3)
@@ -213,11 +215,14 @@ public class RewardHelper(
         }
     }
 
-    private static KeyValuePair<Element, Reward> GetBestRewardSkipLast(Dictionary<Element, Reward> rewardValues, long lastRewardAddress)
-    {
-        return rewardValues.Where(x => x.Key.Address != lastRewardAddress)
-                            .OrderByDescending(x => x.Value.Value).FirstOrDefault();
-    }
+    /** Select the best reward, skipping the last one or two unless they are divine/mirror */
+private static KeyValuePair<Element, Reward> GetBestReward(Dictionary<Element, Reward> rewardValues, SanctumRewardWindow sanctumRewardWindow, int skipCount)
+{
+    var lastRewards = sanctumRewardWindow.RewardElements.TakeLast(skipCount).Select(e => e.Address).ToHashSet();
+    return rewardValues.Where(x => !lastRewards.Contains(x.Key.Address) || x.Value.Name.Contains("Mirror", StringComparison.OrdinalIgnoreCase) || x.Value.Name.Contains("Divine Orb", StringComparison.OrdinalIgnoreCase))
+                       .OrderByDescending(x => x.Value.Value)
+                       .FirstOrDefault();
+}
 
     private bool IsInPactRoom()
     {
@@ -246,15 +251,22 @@ public class RewardHelper(
             baseName = "Orb of Horizons";
         }
 
-        var data = new BaseItemType
-        {
-            BaseName = baseName,
-            ClassName = "StackableCurrency",
-            Metadata = ""
-        };
-
-        var fn = pluginBridge.GetMethod<Func<BaseItemType, double>>("NinjaPrice.GetBaseItemTypeValue");
-        var value = (fn != null ? fn(data) : baseCurrencyValues.GetValueOrDefault(data.BaseName, 0)) * stackSize;
+            var data = new BaseItemType
+            {
+                BaseName = baseName,
+                ClassName = "StackableCurrency",
+                Metadata = ""
+            };
+            double value;
+            var fn = pluginBridge.GetMethod<Func<BaseItemType, double>>("NinjaPrice.GetBaseItemTypeValue");
+            if (fn != null)
+            {
+                value = fn(data) * stackSize;
+            }
+            else
+            {
+                value = baseCurrencyValues.GetValueOrDefault(data.BaseName, 0) * stackSize;
+            }
 
         rewardValues.Add(reward, new Reward { Name = rewardName, Count = stackSize, Value = value });
     }
@@ -262,32 +274,16 @@ public class RewardHelper(
     return rewardValues;
 }
 
-    private KeyValuePair<Element, Reward> DetermineBestRewardForFloor3(Dictionary<Element, Reward> rewardValues) {
-    bool hasEightRoomChoices = floorWindow.FloorData.RoomChoices.Count == 8;
-    bool containsSpecialRewards = rewardValues.Any(x => x.Value.Name.Contains("Divine Orb") || x.Value.Name.Contains("Mirror"));
-
-    if (hasEightRoomChoices)
+    private KeyValuePair<Element, Reward> DetermineBestRewardForFloor3(Dictionary<Element, Reward> rewardValues)
     {
-        if (!containsSpecialRewards)
+        if (floorWindow.FloorData.RoomChoices.Count == 8)
         {
-            return rewardValues
-                .Where(x => x.Key.Address == sanctumRewardWindow.RewardElements.First().Address)
-                .OrderByDescending(x => x.Value.Value)
-                .FirstOrDefault();
+            // Use Floor 4 logic since 2nd reward goes to "End of Floor 4"
+            return GetBestReward(rewardValues, sanctumRewardWindow, 2);
         }
-        else
-        {
-            return rewardValues
-                .OrderByDescending(x => x.Value.Value)
-                .FirstOrDefault();
-        }
-    }
 
-    return rewardValues
-        .Where(x => x.Key.Address != sanctumRewardWindow.RewardElements.Last().Address || containsSpecialRewards)
-        .OrderByDescending(x => x.Value.Value)
-        .FirstOrDefault();
-}
+        return GetBestReward(rewardValues, sanctumRewardWindow, 1);
+    }
     private (int divCounter, int pactCounter, int rewardsWeCanTake) CalculateFloor4Metrics()
     {
         int divCounter = 0;
