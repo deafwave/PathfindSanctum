@@ -262,27 +262,32 @@ public class RewardHelper(
     return rewardValues;
 }
 
-    private KeyValuePair<Element, Reward> DetermineBestRewardForFloor3(Dictionary<Element, Reward> rewardValues)
-    {
-        if (floorWindow.FloorData.RoomChoices.Count == 8)
-        {
-            // Idk what this one does
-            if (rewardValues.All(x => !x.Value.Name.Contains("Divine Orb") && !x.Value.Name.Contains("Mirror")))
-            {
-                return rewardValues.Where(x => x.Key.Address == sanctumRewardWindow.RewardElements.First().Address)
-                    .OrderByDescending(x => x.Value.Value).FirstOrDefault();
-            }
-            else
-            {
-                return rewardValues.OrderByDescending(x => x.Value.Value).FirstOrDefault();
-            }
-        }
+    private KeyValuePair<Element, Reward> DetermineBestRewardForFloor3(Dictionary<Element, Reward> rewardValues) {
+    bool hasEightRoomChoices = floorWindow.FloorData.RoomChoices.Count == 8;
+    bool containsSpecialRewards = rewardValues.Any(x => x.Value.Name.Contains("Divine Orb") || x.Value.Name.Contains("Mirror"));
 
-        // idk what this one does
-        return rewardValues.Where(x => x.Key.Address != sanctumRewardWindow.RewardElements.Last().Address
-        || (x.Key.Address == sanctumRewardWindow.RewardElements.Last().Address && (x.Value.Name.Contains("Mirror") || x.Value.Name.Contains("Divine Orb"))))
-            .OrderByDescending(x => x.Value.Value).FirstOrDefault();
+    if (hasEightRoomChoices)
+    {
+        if (!containsSpecialRewards)
+        {
+            return rewardValues
+                .Where(x => x.Key.Address == sanctumRewardWindow.RewardElements.First().Address)
+                .OrderByDescending(x => x.Value.Value)
+                .FirstOrDefault();
+        }
+        else
+        {
+            return rewardValues
+                .OrderByDescending(x => x.Value.Value)
+                .FirstOrDefault();
+        }
     }
+
+    return rewardValues
+        .Where(x => x.Key.Address != sanctumRewardWindow.RewardElements.Last().Address || containsSpecialRewards)
+        .OrderByDescending(x => x.Value.Value)
+        .FirstOrDefault();
+}
     private (int divCounter, int pactCounter, int rewardsWeCanTake) CalculateFloor4Metrics()
     {
         int divCounter = 0;
