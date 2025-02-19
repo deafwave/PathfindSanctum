@@ -136,7 +136,7 @@ public class ProfileContent
                 ["Lair_Floor2"] = 0,
                 ["Lair_Floor3"] = 0,
                 ["Lair_Floor4"] = 0,
-                ["Miniboss_Floor1"] = 51,
+                ["Miniboss_Floor1"] = 3,
                 ["Miniboss_Floor2"] = 51,
                 ["Miniboss_Floor3"] = 3,
                 ["Miniboss_Floor4"] = 3,
