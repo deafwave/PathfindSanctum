@@ -208,7 +208,7 @@ public class PathfindSanctumSettings : ISettings
                     ImGui.InputTextWithHint("##AfflictionFilter", "Filter", ref afflictionFilter, 100);
                     IEnumerable<string> afflictionTypes;
 
-                    if (RemoteMemoryObject.pTheGame?.Files?.SanctumPersistentEffects != null)
+                    if (RemoteMemoryObject.pTheGame?.Files?.SanctumPersistentEffects.EntriesList.Count != 0)
                     {
                         afflictionTypes = RemoteMemoryObject.pTheGame.Files.SanctumPersistentEffects.EntriesList
                             .Where(entry => entry.Id.StartsWith("Affliction"))
