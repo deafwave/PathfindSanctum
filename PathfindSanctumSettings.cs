@@ -114,7 +114,7 @@ public class PathfindSanctumSettings : ISettings
 
                     IEnumerable<string> currencyTypes;
 
-                    if (RemoteMemoryObject.pTheGame?.Files?.SanctumDeferredRewardCategories != null)
+                    if (RemoteMemoryObject.pTheGame?.Files?.SanctumDeferredRewardCategories?.EntriesList.Count != 0)
                     {
                         currencyTypes = RemoteMemoryObject.pTheGame.Files.SanctumDeferredRewardCategories.EntriesList
                             .Select(entry => entry.CurrencyName);
