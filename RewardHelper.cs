@@ -182,13 +182,15 @@ public class RewardHelper(
     {
         var selectedRewards = rewardValues.OrderByDescending(x => x.Value.Value)
                                           .Take(rewardsWeCanTake);
-        if (selectedRewards.Count() == 0)
+        if (selectedRewards.Any())
+        {
+            DrawRewardElements(rewardValues, selectedRewards.FirstOrDefault());
+        }
+        else
         {
             DrawRewardElements(rewardValues, rewardValues.FirstOrDefault());
             return;
         }
-
-        DrawRewardElements(rewardValues, selectedRewards.FirstOrDefault());
     }
 
     private void DrawRewardsSimple(Dictionary<Element, Reward> rewardValues)

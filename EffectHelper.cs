@@ -10,7 +10,7 @@ namespace PathfindSanctum;
 
 public class EffectHelper(
     GameController gameController,
-    ExileCore.Graphics graphics
+    Graphics graphics
 )
 {
 

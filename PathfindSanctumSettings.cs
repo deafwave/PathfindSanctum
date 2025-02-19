@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using ExileCore;
 using ExileCore.PoEMemory;
-using ExileCore.PoEMemory.FilesInMemory.Sanctum;
 using ExileCore.Shared.Helpers;
 using ExileCore.Shared.Interfaces;
 using ExileCore.Shared.Nodes;

@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.Linq;
-using System.Numerics;
 using ExileCore;
 using ExileCore.PoEMemory.Elements.Sanctum;
 using ExileCore.PoEMemory.FilesInMemory.Sanctum;

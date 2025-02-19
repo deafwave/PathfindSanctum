@@ -1,8 +1,6 @@
 using ExileCore;
-using ExileCore.PoEMemory;
 using System;
 using System.Diagnostics;
-using System.Linq;
 
 namespace PathfindSanctum;
 
@@ -13,7 +11,6 @@ public class PathfindSanctumPlugin : BaseSettingsPlugin<PathfindSanctumSettings>
     private WeightCalculator weightCalculator;
     private RewardHelper rewardHelper;
     private EffectHelper effectHelper;
-    private readonly Stopwatch _sinceLastReloadStopwatch = Stopwatch.StartNew();
     private readonly Stopwatch _sinceLastPathfindStopwatch = Stopwatch.StartNew();
 
     public override bool Initialise()
@@ -25,30 +22,8 @@ public class PathfindSanctumPlugin : BaseSettingsPlugin<PathfindSanctumSettings>
         return base.Initialise();
     }
 
-    // Fixes character select file reload issue
-    // Repro: Menagerie -> Hideout -> Character Select -> Character in LA -> Character Select -> Sanctum -> enter -> no affliction data
-    public override void AreaChange(AreaInstance area)
-    {
-        // Might help with refreshing files so data exists.
-        var files = new FilesContainer(GameController.Game.M);
-        var isDiff = false;
-        if (files.SanctumRooms.EntriesList.Count != GameController.Files.SanctumRooms.EntriesList.Count)
-        {
-            isDiff = true;
-        }
-        else
-        {
-            if (files.SanctumRooms.EntriesList.Where((t, i) => t.Address != GameController.Files.SanctumRooms.EntriesList[i].Address).Any())
-            {
-                isDiff = true;
-            }
-        }
-
-        if (isDiff)
-        {
-            GameController.Game.ReloadFiles();
-        }
-    }
+    // NOTE: Minor bug, but data fixes itself after a few seconds (e.g. 1 room)
+    // Repro: Menagerie -> Hideout -> Character Select -> Character in LA -> Character Select -> Sanctum -> enter -> no affliction/reward data
 
     public override void Render()
     {
@@ -56,7 +31,7 @@ public class PathfindSanctumPlugin : BaseSettingsPlugin<PathfindSanctumSettings>
             return;
 
         if (
-            !GameController.Area.CurrentArea.Area.RawName.StartsWith("Sanctum", System.StringComparison.OrdinalIgnoreCase)
+            !GameController.Area.CurrentArea.Area.Id.StartsWith("Sanctum", System.StringComparison.OrdinalIgnoreCase)
         )
             return;
 
@@ -66,12 +41,6 @@ public class PathfindSanctumPlugin : BaseSettingsPlugin<PathfindSanctumSettings>
         var floorWindow = GameController.Game.IngameState.IngameUi.SanctumFloorWindow;
         if (floorWindow == null || !floorWindow.IsVisible)
             return;
-
-        if (GameController.Files.SanctumRooms.EntriesList.Count == 0 && _sinceLastReloadStopwatch.Elapsed > TimeSpan.FromSeconds(5))
-        {
-           GameController.Files.LoadFiles();
-           _sinceLastReloadStopwatch.Restart();
-        }
 
         if (
             stateTracker.HasRoomData()
