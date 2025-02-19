@@ -1,149 +1,138 @@
-﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using ExileCore.PoEMemory.Elements.Sanctum;
-using SharpDX;
-using Vector2 = System.Numerics.Vector2;
+using ExileCore;
 
-namespace BetterSanctum;
+namespace PathfindSanctum;
 
-public class PathFinder
+/// <summary>
+/// Handles Dijkstra Pathfinding logic for Sanctum, calculating optimal routes based on room weights.
+/// </summary>
+public class PathFinder(
+    Graphics graphics,
+    PathfindSanctumSettings settings,
+    SanctumStateTracker sanctumStateTracker,
+    WeightCalculator weightCalculator
+)
 {
-    private readonly List<List<SanctumRoomElement>> roomsByLayer;
-    private readonly int floorNumber = -1;
-    private readonly byte[][][] roomLayout;
-    public readonly int playerLayerIndex = -1;
-    public readonly int playerRoomIndex = -1;
-    private readonly bool randomAfflictionOnAffliction = false;
-    private readonly bool ignoreMinorAfflictions = false;
-    private readonly bool trapResolveAffliction = false;
-    private static readonly string[] majorAfflictions = { "Anomaly Attractor", "Chiselled Stone", "Corrosive Concoction", "Cutpurse", "Deadly Snare", "Death Toll", "Demonic Skull", "Ghastly Scythe", "Glass Shard", "Orb of Negation", "Unassuming Brick", "Veiled Sight" };
+    private double[,] roomWeights;
+    private readonly Dictionary<(int, int), string> debugTexts = [];
+    private readonly Dictionary<(int, int), string> displayTexts = [];
 
-    public readonly int currentResolve = 0;
-    public readonly int inspiration = 0;
-    public readonly int gold = 0;
-    public readonly int maxResolve = 0;
+    private List<(int, int)> foundBestPath;
 
-    private readonly Dictionary<(int, int), int> roomWeightMap = new Dictionary<(int, int), int>();
-
-    public static BetterSanctumPlugin Core;
-    public PathFinder(BetterSanctumPlugin core)
+    #region Path Calculation
+    public void CreateRoomWeightMap()
     {
-        Core = core;
+        var roomsByLayer = sanctumStateTracker.roomsByLayer;
 
-        SanctumFloorWindow floorWindow = Core.GameController.IngameState.IngameUi.SanctumFloorWindow;
-        string bossId = floorWindow?.Rooms?.Last()?.Data?.FightRoom?.Id;
+        roomWeights = new double[roomsByLayer.Count, roomsByLayer.Max(x => x.Count)];
 
-        playerLayerIndex = floorWindow.FloorData.RoomChoices.Count - 1;
-        if (floorWindow.FloorData.RoomChoices.Count > 0)
+        for (var layer = 0; layer < roomsByLayer.Count; layer++)
         {
-            playerRoomIndex = floorWindow.FloorData.RoomChoices.Last();
+            for (var room = 0; room < roomsByLayer[layer].Count; room++)
+            {
+                var sanctumRoom = roomsByLayer[layer][room];
+                if (sanctumRoom == null)
+                    continue;
+
+                var stateTrackerRoom = sanctumStateTracker.GetRoom(layer, room);
+                var (weight, debug, display) = weightCalculator.CalculateRoomWeight(stateTrackerRoom, sanctumStateTracker);
+                roomWeights[layer, room] = weight;
+                debugTexts[(layer, room)] = debug;
+                displayTexts[(layer, room)] = display;
+            }
         }
-        roomsByLayer = floorWindow.RoomsByLayer;
-        roomLayout = floorWindow.FloorData.RoomLayout;
-        floorNumber = CalculateFloorNumber(bossId);
-        currentResolve = floorWindow.FloorData.CurrentResolve;
-        inspiration = floorWindow.FloorData.Inspiration;
-        gold = floorWindow.FloorData.Gold;
-        maxResolve = floorWindow.FloorData.MaxResolve;
-
-        /** Boons & Afflictions & Relics */
-        var mapStats = Core.GameController.IngameState.Data.MapStats;
-        randomAfflictionOnAffliction = mapStats.ContainsKey(ExileCore.Shared.Enums.GameStat.SanctumGainRandomMinorAfflictionOnGainingAffliction);
-        ignoreMinorAfflictions = mapStats.ContainsKey(ExileCore.Shared.Enums.GameStat.SanctumPreventMinorAfflictions);
-        trapResolveAffliction = mapStats.Any(keyValuePair => keyValuePair.Key.ToString() == "AfflictionTrapSanctumDamage");
-
-
-        /*// TODO: Extract this out
-        bool avoidFountain = mapStats.ContainsKey(ExileCore.Shared.Enums.GameStat.SanctumGainRandomMinorAfflictionOnFountainUse);
-        bool reduceMerchant = mapStats.ContainsKey(ExileCore.Shared.Enums.GameStat.SanctumMerchantOnlyOneOption);
-
-        // Significantly Harder (likely not worth programming)
-        bool seekOneAffliction = mapStats.ContainsKey(ExileCore.Shared.Enums.GameStat.SanctumNextAfflictionConvertedToMinorBoon);*/
     }
 
     public List<(int, int)> FindBestPath()
     {
-        int numLayers = roomLayout.Length;
+        int numLayers = sanctumStateTracker.roomLayout.Length;
         var startNode = (7, 0);
 
-        var bestPath = new Dictionary<(int, int), List<(int, int)>> { { startNode, new List<(int, int)> { startNode } } };
-        var minCost = new Dictionary<(int, int), int>();
-        foreach (var room in roomWeightMap.Keys)
+        var bestPath = new Dictionary<(int, int), List<(int, int)>>
         {
-            minCost[room] = int.MaxValue;
-        }
-        minCost[startNode] = roomWeightMap[startNode];
-
-        var queue = new SortedSet<(int, int)>(Comparer<(int, int)>.Create((a, b) =>
-        {
-            int costA = minCost[a];
-            int costB = minCost[b];
-            if (costA != costB)
             {
-                return costA.CompareTo(costB);
+                startNode,
+                new List<(int, int)> { startNode }
             }
-            // If costs are equal, break the tie by comparing the nodes
-            return a.CompareTo(b);
-        }))
-    {
-        startNode
-    };
+        };
+        var maxCost = new Dictionary<(int, int), double>();
+
+        // Initialize maxCost for all valid rooms
+        for (int i = 0; i < roomWeights.GetLength(0); i++)
+        {
+            for (int j = 0; j < roomWeights.GetLength(1); j++)
+            {
+                maxCost[(i, j)] = double.MinValue;
+            }
+        }
+        maxCost[startNode] = roomWeights[startNode.Item1, startNode.Item2];
+
+        var queue = new SortedSet<(int, int)>(
+            Comparer<(int, int)>.Create(
+                (a, b) =>
+                {
+                    double costA = maxCost[a];
+                    double costB = maxCost[b];
+                    if (costA != costB)
+                    {
+                        // Reverse comparison to prioritize higher weights
+                        return costB.CompareTo(costA);
+                    }
+                    // If costs are equal, break the tie by comparing the nodes
+                    return a.CompareTo(b);
+                }
+            )
+        )
+        {
+            startNode
+        };
 
         while (queue.Any())
         {
             var currentRoom = queue.First();
-            queue.Remove(currentRoom); // Remove the processed node from the queue
+            queue.Remove(currentRoom);
 
-            foreach (var neighbor in GetNeighbors(currentRoom, roomLayout))
+            foreach (var neighbor in GetNeighbors(currentRoom, sanctumStateTracker.roomLayout))
             {
-                int neighborCost = minCost[currentRoom] + roomWeightMap[neighbor];
+                double neighborCost =
+                    maxCost[currentRoom] + roomWeights[neighbor.Item1, neighbor.Item2];
 
-                if (neighborCost < minCost[neighbor])
+                if (neighborCost > maxCost[neighbor])
                 {
-                    // Remove the old entry before adding the updated one
                     queue.Remove(neighbor);
-
-                    // Update the minimum cost and best path
-                    minCost[neighbor] = neighborCost;
-
-                    // Add the neighbor to the queue at the correct position
+                    maxCost[neighbor] = neighborCost;
                     queue.Add(neighbor);
-
-                    // Create a new list for the neighbor node and copy the path from the current node
                     bestPath[neighbor] = new List<(int, int)>(bestPath[currentRoom]) { neighbor };
                 }
             }
         }
 
-        // DEBUGGING
-        /*foreach (var kvp in bestPath)
-        {
-            var key = kvp.Key;
-            var value = kvp.Value;
-
-            // Output the key and value to LogError
-            LogError($"Key: {key}, Value: {string.Join(", ", value)}, minCost: {minCost[key]}");
-        }*/
-
         var groupedPaths = bestPath.GroupBy(pair => pair.Value.Count());
         var maxCountGroup = groupedPaths.OrderByDescending(group => group.Key).FirstOrDefault();
-        var path = maxCountGroup.OrderBy(pair => minCost.GetValueOrDefault(pair.Key, int.MaxValue)).FirstOrDefault().Value;
-        if (playerLayerIndex != -1 && playerRoomIndex != -1)
+        var path = maxCountGroup
+            ?.OrderByDescending(pair => maxCost.GetValueOrDefault(pair.Key, double.MinValue))
+            .FirstOrDefault()
+            .Value;
+
+        if (sanctumStateTracker.PlayerLayerIndex != -1 && sanctumStateTracker.PlayerRoomIndex != -1)
         {
-            path = bestPath.TryGetValue((playerLayerIndex, playerRoomIndex), out var specificPath) ? specificPath : new List<(int, int)>();
+            path = bestPath.TryGetValue(
+                (sanctumStateTracker.PlayerLayerIndex, sanctumStateTracker.PlayerRoomIndex),
+                out var specificPath
+            )
+                ? specificPath
+                : new List<(int, int)>();
         }
 
-
-        if (path == null)
-        {
-            return new List<(int, int)>();
-        }
-
-        return path;
+        foundBestPath = path ?? new List<(int, int)>();
+        return foundBestPath;
     }
 
-    private static IEnumerable<(int, int)> GetNeighbors((int, int) currentRoom, byte[][][] connections)
+    private static IEnumerable<(int, int)> GetNeighbors(
+        (int, int) currentRoom,
+        byte[][][] connections
+    )
     {
         int currentLayerIndex = currentRoom.Item1;
         int currentRoomIndex = currentRoom.Item2;
@@ -156,7 +145,11 @@ public class PathFinder
 
         byte[][] previousLayer = connections[previousLayerIndex];
 
-        for (int previousLayerRoomIndex = 0; previousLayerRoomIndex < previousLayer.Length; previousLayerRoomIndex++)
+        for (
+            int previousLayerRoomIndex = 0;
+            previousLayerRoomIndex < previousLayer.Length;
+            previousLayerRoomIndex++
+        )
         {
             var previousLayerRoom = previousLayer[previousLayerRoomIndex];
 
@@ -166,178 +159,79 @@ public class PathFinder
             }
         }
     }
+    #endregion
 
-    public void CreateRoomWeightMap()
+    #region Visualization
+    public void DrawInfo()
     {
-        for (var layerIndex = roomsByLayer.Count - 1; layerIndex >= 0; layerIndex--)
+        if(!settings.DebugEnable.Value && displayTexts.Count == 0)
+            return;
+
+        var roomsByLayer = sanctumStateTracker.roomsByLayer;
+
+        for (var layer = 0; layer < roomsByLayer.Count; layer++)
         {
-            var roomLayer = roomsByLayer[layerIndex];
-            for (var roomIndex = 0; roomIndex < roomLayer.Count; roomIndex++)
+            for (var room = 0; room < roomsByLayer[layer].Count; room++)
             {
-                var room = roomLayer[roomIndex];
+                var sanctumRoom = sanctumStateTracker.GetRoom(layer, room);
+                if (sanctumRoom == null)
+                    continue;
 
-                int numConnections = roomLayout[layerIndex][roomIndex].Length;
+                var pos = sanctumRoom.Position;
 
-                roomWeightMap[(layerIndex, roomIndex)] = CalculateRoomWeight(room, layerIndex, numConnections);
-            }
-        }
-    }
-
-    private int CalculateRoomWeight(SanctumRoomElement room, int roomLayerIndex, int numConnections)
-    {
-        int roomWeight = 1000000; // Base weight
-
-        string floorSuffix = $"_Floor{floorNumber}";
-
-        string debugText = "";
-        string playerText = "";
-
-        // FightRoom Weight
-        var fightRoomId = room.Data.FightRoom?.RoomType?.Id;
-        if (fightRoomId != null)
-        {
-            int fightRoomWeight = Core.Settings.GetFightRoomWeight(fightRoomId + floorSuffix);
-            if (fightRoomId == "Arena" && trapResolveAffliction)
-            {
-                fightRoomWeight *= 4;
-            } else if (fightRoomId == "Explore" && (currentResolve + inspiration) < 50)
-            {
-                roomWeight *= 10;
-            }
-            playerText += $"{fightRoomId}";
-            debugText += $"\nRoomType: {fightRoomWeight}";
-            roomWeight -= fightRoomWeight;
-        }
-
-        // Affliction Weight
-        var roomAffliction = room.Data?.RoomEffect?.ReadableName;
-        if (roomAffliction != null)
-        {
-            int afflictionWeight = Core.Settings.GetAfflictionWeight(roomAffliction);
-            if (randomAfflictionOnAffliction)
-            {
-                afflictionWeight -= -100; // TODO: Weighted average towards the top of the spectrum
-            }
-            if (ignoreMinorAfflictions && !majorAfflictions.Any(roomAffliction.Equals))
-            {
-                afflictionWeight = 0;
-            }
-            if (floorNumber == 4)
-            {
-                if (roomAffliction.Equals("Floor Tax"))
+                // DebugWindow.LogMsg($"{layer}, {room}: {pos}");
+                if (settings.DebugEnable.Value)
                 {
-                    afflictionWeight = 0;
+                    var debugText = debugTexts.TryGetValue((layer, room), out var text)
+                        ? text
+                        : string.Empty;
+                    var displayText = $"Weight: {roomWeights[layer, room]:F0}\n{debugText}";
+
+                    graphics.DrawTextWithBackground(
+                        displayText,
+                        new System.Numerics.Vector2(pos.X, pos.Y),
+                        settings.TextColor,
+                        settings.BackgroundColor
+                    );
+                } else
+                {
+                    var infoText = displayTexts.TryGetValue((layer, room), out var text)
+                        ? text
+                        : string.Empty;
+
+                    graphics.DrawTextWithBackground(
+                        infoText,
+                        new System.Numerics.Vector2(pos.X, pos.Y),
+                        settings.TextColor,
+                        settings.BackgroundColor
+                    );
                 }
-            }
-            debugText += $"\nAffliction: {afflictionWeight}";
-            roomWeight -= afflictionWeight;
-        }
-
-        // Reward Weight
-        var rewardOne = room.Data?.Reward1?.CurrencyName;
-        var rewardTwo = room.Data?.Reward2?.CurrencyName;
-        var rewardThree = room.Data?.Reward3?.CurrencyName;
-        if (rewardOne != null && rewardOne != null && rewardThree != null)
-        {
-            int rewardWeight1 = Core.Settings.GetCurrencyWeight(rewardOne + "_Now");
-            int rewardWeight2 = Core.Settings.GetCurrencyWeight(rewardTwo + "_EndOfFloor");
-            int rewardWeight3 = Core.Settings.GetCurrencyWeight(rewardThree + "_EndOfSanctum");
-            int maxRewardWeight = Math.Max(Math.Max(rewardWeight1, rewardWeight2), rewardWeight3);
-            if(rewardWeight1 > 5000)
-            {
-                playerText += $"\n{rewardOne}";
-            }
-            if (rewardWeight2 > 5000)
-            {
-                playerText += $"\n{rewardTwo}";
-            }
-            if (rewardWeight3 > 5000)
-            {
-                playerText += $"\n{rewardThree}";
-            }
-            debugText += $"\nCurrency: {maxRewardWeight}";
-            roomWeight -= maxRewardWeight;
-        }
-        // Room Weight
-        var roomType = room.Data?.RewardRoom?.RoomType?.Id;
-        if (roomType != null)
-        {
-            int roomTypeWeight = Core.Settings.GetRoomTypeWeight(roomType + floorSuffix);
-            debugText += $"\nRewardType: {roomTypeWeight}";
-            if (roomType != "Deferral")
-            {
-                roomWeight -= roomTypeWeight;
-            }
-            else if (rewardOne == null && rewardTwo == null && rewardThree == null)
-            {
-                roomWeight -= roomTypeWeight;
+               
             }
         }
-
-
-        // If total is still zero give it a base value of 25 on floor one and two, 75 on floor three and four
-        if (debugText == "")
-        {
-            if (floorNumber == 1 || floorNumber == 2)
-            {
-                roomWeight -= 25; // empty value floor one two
-            }
-            else
-            {
-                roomWeight -= 75; // empty value floor three four
-            }
-        }
-
-        // Paths Weight
-        if (numConnections > 0)
-        {
-            int connectionsWeight = numConnections * 5;
-            debugText += $"\nConnections: {connectionsWeight}";
-            roomWeight -= connectionsWeight;
-        }
-
-        debugText += $"\nTotal: {1000000 - roomWeight}";
-
-        if (Core.Settings.DebugEnable)
-        {
-            Vector2 weightTextPosition = new Vector2(room.GetClientRectCache.TopLeft.X, room.GetClientRectCache.TopLeft.Y);
-            DrawTextWithBackground(playerText + debugText, weightTextPosition, Core.Settings.TextColor, Core.Settings.BackgroundColor); // You can customize the color
-        } else
-        {
-            Vector2 weightTextPosition = new Vector2(room.GetClientRectCache.TopLeft.X, room.GetClientRectCache.TopLeft.Y);
-            DrawTextWithBackground(playerText, weightTextPosition, Core.Settings.TextColor, Core.Settings.BackgroundColor); // You can customize the color
-        }
-
-        return roomWeight;
     }
 
-    private static int CalculateFloorNumber(string bossId)
+    public void DrawBestPath()
     {
-        if (bossId == "Cellar_Boss_1_1")
-        {
-            return 1;
-        }
-        else if (bossId == "Vaults_Boss_1_1")
-        {
-            return 2;
-        }
-        else if (bossId == "Nave_Boss_1_1")
-        {
-            return 3;
-        }
-        else if (bossId == "Crypt_Boss_1_1")
-        {
-            return 4;
-        }
+        if (this.foundBestPath == null)
+            return;
 
-        return -1;
-    }
+        foreach (var room in this.foundBestPath)
+        {
+            if (
+                room.Item1 == sanctumStateTracker.PlayerLayerIndex
+                && room.Item2 == sanctumStateTracker.PlayerRoomIndex
+            )
+                continue;
 
-    private static Vector2 DrawTextWithBackground(string text, Vector2 position, Color color, Color backgroundColor)
-    {
-        var textSize = Core.Graphics.MeasureText(text);
-        Core.Graphics.DrawBox(position, textSize + position, backgroundColor);
-        Core.Graphics.DrawText(text, position, color);
-        return textSize;
+            var sanctumRoom = sanctumStateTracker.roomsByLayer[room.Item1][room.Item2];
+
+            graphics.DrawFrame(
+                sanctumRoom.GetClientRect(),
+                settings.BestPathColor,
+                settings.FrameThickness
+            );
+        }
     }
+    #endregion
 }
