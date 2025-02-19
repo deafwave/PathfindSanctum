@@ -221,7 +221,6 @@ public class PathfindSanctumSettings : ISettings
                             .Select(key => key.Split('_')[0])
                             .Distinct();
                     }
-                    //foreach (var type in rewardRoomTypes.Where(t => t.Contains(roomFilter, StringComparison.InvariantCultureIgnoreCase)))
                     foreach (var type in afflictionTypes.Where(t =>
                                  t.Contains(afflictionFilter, StringComparison.InvariantCultureIgnoreCase) ||
                                  AfflictionDescriptions[t].Contains(afflictionFilter, StringComparison.InvariantCultureIgnoreCase)))
