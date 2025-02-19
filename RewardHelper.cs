@@ -203,7 +203,7 @@ public class RewardHelper(
     {
         if (floor <= 2)
         {
-            var bestReward = GetBestRewardSkipLastUnlessDivineOrMirror(rewardValues, sanctumRewardWindow);
+            var bestReward = GetBestReward(rewardValues, sanctumRewardWindow, 1);
             DrawRewardElements(rewardValues, bestReward);
         }
         else if (floor == 3)
@@ -217,23 +217,14 @@ public class RewardHelper(
         }
     }
 
-    /** Only select reward 1 or 2 unless reward 3 is a divine/mirror */
-    private static KeyValuePair<Element, Reward> GetBestRewardSkipLastUnlessDivineOrMirror(Dictionary<Element, Reward> rewardValues, SanctumRewardWindow sanctumRewardWindow)
-    {
-        var lastReward = sanctumRewardWindow.RewardElements.Last().Address;
-        return rewardValues.Where(x => x.Key.Address != lastReward || x.Value.Name.Contains("Mirror", StringComparison.OrdinalIgnoreCase) || x.Value.Name.Contains("Divine Orb", StringComparison.OrdinalIgnoreCase))
-                          .OrderByDescending(x => x.Value.Value)
-                          .FirstOrDefault();
-    }
-
-    /** Only select reward 1 unless reward 2 or 3 is a divine/mirror */
-    private static KeyValuePair<Element, Reward> GetBestRewardSkipLastTwoUnlessDivineOrMirror(Dictionary<Element, Reward> rewardValues, SanctumRewardWindow sanctumRewardWindow)
-    {
-        var lastTwoRewards = sanctumRewardWindow.RewardElements.TakeLast(2).Select(e => e.Address).ToHashSet();
-        return rewardValues.Where(x => !lastTwoRewards.Contains(x.Key.Address) || x.Value.Name.Contains("Mirror", StringComparison.OrdinalIgnoreCase) || x.Value.Name.Contains("Divine Orb", StringComparison.OrdinalIgnoreCase))
-                          .OrderByDescending(x => x.Value.Value)
-                          .FirstOrDefault();
-    }
+    /** Select the best reward, skipping the last one or two unless they are divine/mirror */
+private static KeyValuePair<Element, Reward> GetBestReward(Dictionary<Element, Reward> rewardValues, SanctumRewardWindow sanctumRewardWindow, int skipCount)
+{
+    var lastRewards = sanctumRewardWindow.RewardElements.TakeLast(skipCount).Select(e => e.Address).ToHashSet();
+    return rewardValues.Where(x => !lastRewards.Contains(x.Key.Address) || x.Value.Name.Contains("Mirror", StringComparison.OrdinalIgnoreCase) || x.Value.Name.Contains("Divine Orb", StringComparison.OrdinalIgnoreCase))
+                       .OrderByDescending(x => x.Value.Value)
+                       .FirstOrDefault();
+}
 
     private bool IsInPactRoom()
     {
@@ -243,25 +234,24 @@ public class RewardHelper(
 
 
 
-    private Dictionary<Element, Reward> GetRewardValues(IEnumerable<Element> rewardElements)
+    private Dictionary<Element, Reward> GetRewardValues(IEnumerable<Element> rewardElements) {
+        
+    var rewardValues = new Dictionary<Element, Reward>();
+    var regex = new Regex(@"(Receive)\s((?'rewardcount'(\d+))x(?'rewardname'.*))\s(right now|at the end of the next Floor|at the end of the Floor|on completing the Sanctum)$");
+
+    foreach (var reward in rewardElements)
     {
-        var rewardValues = new Dictionary<Element, Reward>();
+        var match = regex.Match(reward.Children[1].Text);
+        if (!match.Success) continue;
 
-        foreach (var reward in rewardElements)
+        var rewardName = match.Groups["rewardname"].Value.Trim();
+        if (!int.TryParse(match.Groups["rewardcount"].ValueSpan.Trim(), out var stackSize)) continue;
+
+        var baseName = rewardName.Replace("Orbs", "Orb").Replace("Mirrors", "Mirror").TrimEnd('s');
+        if (rewardName.Equals("Orb of Horizon", StringComparison.OrdinalIgnoreCase))
         {
-            var match = Regex.Match(reward.Children[1].Text, @"(Receive)\s((?'rewardcount'(\d+))x(?'rewardname'.*))\s(right now|at the end of the next Floor|at the end of the Floor|on completing the Sanctum)$");
-            if (!match.Success)
-                continue;
-
-            var rewardName = match.Groups["rewardname"].Value.Trim();
-            if (!int.TryParse(match.Groups["rewardcount"].ValueSpan.Trim(), out var stackSize))
-                continue;
-
-            var baseName = rewardName.Replace("Orbs", "Orb").Replace("Mirrors", "Mirror").TrimEnd('s');
-            if (rewardName.Equals("Orb of Horizon", StringComparison.OrdinalIgnoreCase))
-            {
-                baseName = "Orb of Horizons";
-            }
+            baseName = "Orb of Horizons";
+        }
 
             var data = new BaseItemType
             {
@@ -280,21 +270,21 @@ public class RewardHelper(
                 value = baseCurrencyValues.GetValueOrDefault(data.BaseName, 0) * stackSize;
             }
 
-            rewardValues.Add(reward, new Reward { Name = rewardName, Count = stackSize, Value = value });
-        }
-
-        return rewardValues;
+        rewardValues.Add(reward, new Reward { Name = rewardName, Count = stackSize, Value = value });
     }
+
+    return rewardValues;
+}
 
     private KeyValuePair<Element, Reward> DetermineBestRewardForFloor3(Dictionary<Element, Reward> rewardValues)
     {
         if (floorWindow.FloorData.RoomChoices.Count == 8)
         {
             // Use Floor 4 logic since 2nd reward goes to "End of Floor 4"
-            return GetBestRewardSkipLastTwoUnlessDivineOrMirror(rewardValues, sanctumRewardWindow);
+            return GetBestReward(rewardValues, sanctumRewardWindow, 2);
         }
 
-        return GetBestRewardSkipLastUnlessDivineOrMirror(rewardValues, sanctumRewardWindow);
+        return GetBestReward(rewardValues, sanctumRewardWindow, 1);
     }
     private (int divCounter, int pactCounter, int rewardsWeCanTake) CalculateFloor4Metrics()
     {
