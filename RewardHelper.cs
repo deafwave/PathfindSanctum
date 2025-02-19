@@ -16,7 +16,7 @@ namespace PathfindSanctum;
 public class RewardHelper(
     PluginBridge pluginBridge,
     IngameState gameState,
-    ExileCore.Graphics graphics,
+    Graphics graphics,
     PathFinder pathFinder,
     SanctumStateTracker stateTracker
 )
