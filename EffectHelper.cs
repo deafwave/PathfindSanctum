@@ -34,6 +34,9 @@ public class EffectHelper(
 
         foreach (var entity in terrainEntityList)
         {
+            if (entity.DistancePlayer >= 100)
+                continue;
+                
             var pos = RemoteMemoryObject.pTheGame.IngameState.Camera.WorldToScreen(entity.PosNum);
 
             if (entity.Metadata.Contains("/Sanctum/Objects/Spawners/SanctumSpawner") || entity.Metadata.Contains("/Sanctum/Objects/SanctumSpawner"))
