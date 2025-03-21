@@ -155,15 +155,15 @@ public class WeightCalculator(GameController gameController, PathfindSanctumSett
         int maxRewardWeight = Math.Max(Math.Max(rewardWeight1, rewardWeight2), rewardWeight3);
 
         // Append display text only for weights above threshold
-        if (rewardWeight1 > 5000)
+        if (rewardWeight1 >= 5000)
         {
             displayText.AppendLine(rewardOne);
         }
-        if (rewardWeight2 > 5000)
+        if (rewardWeight2 >= 5000)
         {
             displayText.AppendLine(rewardTwo);
         }
-        if (rewardWeight3 > 5000)
+        if (rewardWeight3 >= 5000)
         {
             displayText.AppendLine(rewardThree);
         }
