@@ -35,13 +35,13 @@ public class RewardHelper(
         {"Divine Vessel", 0.5},
         {"Enkindling Orb", 0.4},
         {"Exalted Orb", 12},
-        {"Gemcutter's Prism", 1.2},
+        {"Gemcutter's Prism", 1.1},
         {"Glassblower's Bauble", 0.45},
         {"Instilling Orb", 0.4},
         {"Jeweller's Orb", 0.04},
         {"Mirror of Kalandra", 128600},
         {"Orb of Alchemy", 0.04},
-        {"Orb of Alteration", 0.19},
+        {"Orb of Alteration", 0.25},
         {"Orb of Annulment", 4.3},
         {"Orb of Augmentation", 0.03},
         {"Orb of Binding", 0.03},
@@ -52,10 +52,10 @@ public class RewardHelper(
         {"Orb of Scouring", 0.25},
         {"Orb of Transmutation", 0.01},
         {"Orb of Unmaking", 0}, // 0 for Phrecia, 1 for normal leagues
-        {"Regal Orb", 0.4},
+        {"Regal Orb", 0.8},
         {"Sacred Orb", 11},
         {"Stacked Deck", 2},
-        {"Vaal Orb", 0.41},
+        {"Vaal Orb", 0.17},
         {"Veiled Orb", 1700},
         {"Veiled Scarab", 1}
     };

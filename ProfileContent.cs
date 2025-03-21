@@ -108,9 +108,9 @@ public class ProfileContent
                 ["Stacked Decks_Now"] = 349,
                 ["Stacked Decks_EndOfFloor"] = 698,
                 ["Stacked Decks_EndOfSanctum"] = 1047,
-                ["Vaal Orbs_Now"] = 71,
-                ["Vaal Orbs_EndOfFloor"] = 143,
-                ["Vaal Orbs_EndOfSanctum"] = 214,
+                ["Vaal Orbs_Now"] = 35,
+                ["Vaal Orbs_EndOfFloor"] = 71,
+                ["Vaal Orbs_EndOfSanctum"] = 143,
                 ["Veiled Orbs_Now"] = 74192,
                 ["Veiled Orbs_EndOfFloor"] = 74192,
                 ["Veiled Orbs_EndOfSanctum"] = 148385,
@@ -285,6 +285,8 @@ public class ProfileContent
         var profile = CreateBaseProfile();
         profile.AfflictionWeights["Weakened Flesh"] = 0;
         profile.AfflictionWeights["Fiendish Wings"] = -1224;
+        profile.AfflictionWeights["Liquid Cowardice"] = -2557;
+        profile.AfflictionWeights["Honed Claws"] = -612;
 
         foreach (var currency in profile.CurrencyWeights.Keys)
         {
