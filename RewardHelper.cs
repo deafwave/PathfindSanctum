@@ -264,6 +264,9 @@ private static KeyValuePair<Element, Reward> GetBestReward(Dictionary<Element, R
             if (fn != null)
             {
                 value = fn(data) * stackSize;
+                if(value == 0) {
+                    value = baseCurrencyValues.GetValueOrDefault(data.BaseName, 0) * stackSize;
+                }
             }
             else
             {
