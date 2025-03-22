@@ -48,18 +48,19 @@ public class PathfindSanctumPlugin : BaseSettingsPlugin<PathfindSanctumSettings>
         )
         {
             stateTracker.Reset(GameController.Area.CurrentArea);
+            UpdateAndRenderPath();
             return;
         }
 
         UpdateAndRenderPath();
     }
 
-    private void UpdateAndRenderPath()
+    private void UpdateAndRenderPath(bool forceUpdate = false)
     {
         // TODO: Find a better way to optimize this so it's not executed on every render
         // E.g. Only executed if we updated our room states
         stateTracker.UpdateRoomStates(GameController.Game.IngameState.IngameUi.SanctumFloorWindow); // FIXME: Why does this need to be called every render?
-        if (_sinceLastPathfindStopwatch.Elapsed > TimeSpan.FromSeconds(5))
+        if (forceUpdate || _sinceLastPathfindStopwatch.Elapsed > TimeSpan.FromSeconds(5))
         {
             pathFinder.CreateRoomWeightMap();
             pathFinder.FindBestPath();
