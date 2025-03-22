@@ -324,7 +324,10 @@ private static KeyValuePair<Element, Reward> GetBestReward(Dictionary<Element, R
 
         int currentRewardCount = rewards.Count(x => x.DeferralCategory.Id.Contains("FinalBoss") || x.DeferralCategory.Id.Contains("RewardFloor"));
 
-        int rewardsWeCanTake = 2 - currentRewardCount - pactCounter - divCounter;
+        var duplicateRewardStat = gameState.Data.MapStats
+            .FirstOrDefault(x => x.Key.ToString() == "MapLycia2DuplicateUpToXDeferredRewards");
+
+        int rewardsWeCanTake = duplicateRewardStat.Value - currentRewardCount - pactCounter - divCounter;
 
         return (divCounter, pactCounter, rewardsWeCanTake);
     }
